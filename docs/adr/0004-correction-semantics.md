@@ -1,0 +1,3 @@
+# ADR-0004: Correction semantics — scoped, conditional-mode, budgeted
+
+Correction is attribute-scoped: only failing attributes are touched, sequentially, one at a time. Each correction targets the real recent window's modal value conditional on the decoy's other (passing) attributes — the value a real box of that type would carry — and the full check set is re-run after every fix. A correction budget (K attempts) guarantees termination; exhaustion yields UNSAFE. Attributes declared non-correctable (e.g. monitoring behavior, a host-level property) yield UNSAFE immediately when they drift. This mirrors how an operator actually repairs a decoy, and it keeps the loop atomic: a fix that introduces a new violation is caught, not masked.

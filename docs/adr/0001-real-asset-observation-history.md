@@ -1,0 +1,3 @@
+# ADR-0001: Real asset modeled as an observation history
+
+The matched real asset is modeled as a time-ordered observation history, not a single static snapshot. All statistics (tolerance bands, categorical frequencies, pairwise co-occurrence) are derived from the recent window of that history. A snapshot cannot support the joint check, which needs observed combinations to estimate what the real asset never exhibits. This decision is the foundation the engine and corrector build on.

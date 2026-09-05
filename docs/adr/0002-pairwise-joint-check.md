@@ -1,0 +1,3 @@
+# ADR-0002: Joint check is pairwise co-occurrence, not hand-written rules
+
+The joint check runs over every pair of attributes and flags a combination only when the real history should contain it under independence but never does: observed count is zero while the expected count N * P(a) * P(b) is at least one. This is data-driven, so the tool catches fingerprints it was never told about, and the expected-count guard prevents false flags from sparse data. The alternative — hand-written fingerprint rules — is exactly the open-ended guessing the PRD forbids; a full joint model over all attributes is too sparse for histories of a few hundred observations.
