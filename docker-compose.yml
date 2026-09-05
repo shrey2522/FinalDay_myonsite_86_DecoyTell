@@ -31,11 +31,11 @@ services:
     build:
       context: ./containers/identity
       args:
-        ACCOUNT_AGE_DAYS: 100
+        ACCOUNT_AGE_DAYS: 800
     environment:
-      BANNER: "Apache/2.4.41 (Debian)"
+      BANNER: "Apache/2.4.55 (Debian)"
       TIMING_MS: "1500"
-      MONITORING: rate_limited
+      MONITORING: immediate
     ports:
       - "8444:8443"
 
