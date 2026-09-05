@@ -26,7 +26,15 @@ class StoreTests(unittest.TestCase):
         # the demo store's seeded history and live observations are untouched.
         with self.store.conn.cursor() as cur:
             cur.execute("DELETE FROM observations WHERE target LIKE 'test-%%'")
+            cur.execute("SELECT COALESCE(MAX(id), 0) FROM loop_events")
+            self._baseline_event_id = cur.fetchone()[0]
         self.store.conn.commit()
+
+    def tearDown(self):
+        with self.store.conn.cursor() as cur:
+            cur.execute("DELETE FROM loop_events WHERE id > %s", (self._baseline_event_id,))
+        self.store.conn.commit()
+        self.store.conn.close()
 
     def test_seed_append_and_recent_window_round_trip(self):
         self.store.seed(
@@ -70,6 +78,48 @@ class StoreTests(unittest.TestCase):
         )
         self.assertEqual(len(self.store.recent_window(days=90, target=self.REAL)), 1)
         self.assertEqual(len(self.store.recent_window(days=300, target=self.REAL)), 2)
+
+    def test_loop_control_defaults_to_stopped_and_toggles(self):
+        self.assertFalse(self.store.loop_running())
+        self.store.set_loop_running(True)
+        self.assertTrue(self.store.loop_running())
+        self.store.set_loop_running(False)
+        self.assertFalse(self.store.loop_running())
+
+    def test_loop_event_round_trip_and_tail(self):
+        event = {
+            "cycle": 1,
+            "timestamp": "2026-09-05T00:00:00+00:00",
+            "verdict": "CORRECTED",
+            "recheck": "PASS",
+            "fixes": [{"attribute": "service_banner", "before": "A", "after": "B",
+                       "action": "reconfigure server header/banner", "applied": True}],
+            "real_obs": {"service_banner": "Apache/2.4.54 (Debian)", "patch_cadence_days": 12.0,
+                         "timing_band": "fast", "account_age_days": 810.0,
+                         "monitoring_behavior": "immediate"},
+            "decoy_obs": {"service_banner": "Apache/2.4.54 (Debian)", "patch_cadence_days": 12.0,
+                          "timing_band": "fast", "account_age_days": 810.0,
+                          "monitoring_behavior": "immediate"},
+        }
+        self.store.record_loop_event(**event)
+        self.store.record_loop_event(**{**event, "cycle": 2, "verdict": "PASS"})
+
+        tail = self.store.loop_events_after(after_id=self._baseline_event_id, limit=10)
+        self.assertEqual(len(tail), 2)
+        self.assertEqual(tail[0]["cycle"], 1)
+        self.assertEqual(tail[0]["verdict"], "CORRECTED")
+        self.assertEqual(tail[0]["fixes"][0]["attribute"], "service_banner")
+        self.assertEqual(tail[0]["real_obs"]["service_banner"], "Apache/2.4.54 (Debian)")
+
+        latest = self.store.latest_loop_event()
+        self.assertEqual(latest["cycle"], 2)
+        self.assertEqual(latest["verdict"], "PASS")
+
+        after_first = self.store.loop_events_after(
+            after_id=tail[0]["id"], limit=10
+        )
+        self.assertEqual(len(after_first), 1)
+        self.assertEqual(after_first[0]["cycle"], 2)
 
 
 if __name__ == "__main__":

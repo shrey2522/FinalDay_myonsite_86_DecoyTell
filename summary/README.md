@@ -22,9 +22,10 @@ it works**.
 | T4 | Unsafe / insufficient-data + scriptable CLI + proof | `UNSAFE` / `INSUFFICIENT_DATA` + exit codes + JSON proof | [04-t4-unsafe-cli-proof.md](04-t4-unsafe-cli-proof.md) |
 | T5 | Test hardening + README + Docker | 26 tests, byte-identical determinism, containerized verification | [05-t5-hardening-docker.md](05-t5-hardening-docker.md) |
 | Live T1–T3 | Live integration: real containers + PostgreSQL + scheduled loop | real probing, real correction on live servers, 43 tests, `verify_live.py` | [06-live-integration.md](06-live-integration.md) |
+| Web dashboard | Monitoring UI: FastAPI + React/Tailwind/shadcn, loop-as-service | 5 UI views, 58 tests, containerized | [07-web-dashboard.md](07-web-dashboard.md) |
 
-**All five core tickets plus the live-integration layer implemented, tested, and
-committed.**
+**All five core tickets, the live-integration layer, and the web dashboard
+implemented, tested, and committed.**
 
 ## The core idea in one breath
 

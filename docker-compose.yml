@@ -39,5 +39,22 @@ services:
     ports:
       - "8444:8443"
 
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    environment:
+      DECOYTELL_DSN: postgres://decoytell:decoytell@postgres:5432/decoytell
+      DECOYTELL_REAL_HOST: real-asset
+      DECOYTELL_REAL_PORT: "8443"
+      DECOYTELL_DECOY_HOST: decoy
+      DECOYTELL_DECOY_PORT: "8443"
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+      - real-asset
+      - decoy
+
 volumes:
   pgdata:

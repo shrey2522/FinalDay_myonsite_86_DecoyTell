@@ -43,18 +43,23 @@ def _unreachable(observation):
 
 
 def run_loop(probe, store, control, real, decoy, interval=2.0, cycles=None,
-             window_days=90, log=print):
+             window_days=90, log=print, should_stop=None):
     """Run the scheduled verification loop.
 
     ``probe(host, port) -> observation dict``
-    ``store``: object with append(obs, target) and recent_window(days, target)
+    ``store``: object with append(obs, target), recent_window(days, target) and
+        record_loop_event(...) (events are persisted when the store supports it)
     ``control``: callable(changes) -> bool, applying identity changes to the
         decoy's control plane
     ``real`` / ``decoy``: (host, port) tuples
+    ``should_stop``: optional callable -> bool, checked before each cycle (the
+        loop-service keeps running while the loop-control row says so)
     """
     events = []
     cycle = 0
     while cycles is None or cycle < cycles:
+        if should_stop is not None and should_stop():
+            break
         cycle += 1
         timestamp = datetime.now(timezone.utc).isoformat(timespec="seconds")
 
@@ -109,6 +114,13 @@ def run_loop(probe, store, control, real, decoy, interval=2.0, cycles=None,
                  "recheck": recheck, "fixes": applied}
         events.append(event)
         log(event)
+
+        if hasattr(store, "record_loop_event"):
+            store.record_loop_event(
+                cycle=cycle, timestamp=timestamp, verdict=verdict,
+                recheck=recheck, fixes=applied,
+                real_obs=real_obs, decoy_obs=decoy_obs,
+            )
 
         if cycles is None or cycle < cycles:
             time.sleep(interval)

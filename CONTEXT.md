@@ -63,3 +63,13 @@ _Avoid_: current period, slice
 **Matched real asset**:
 The real asset a decoy claims to impersonate; pairing is declared, not discovered.
 _Avoid_: pair, peer
+
+**Loop event**:
+One persisted cycle of the live loop: timestamp, the real and decoy observations, the
+verdict, and any fixes applied with their reasoning.
+_Avoid_: log line, cycle record
+
+**Loop control**:
+The running flag (PostgreSQL row) the API toggles and the loop process polls each
+cycle; it is how the dashboard starts and stops the loop without owning it.
+_Avoid_: flag, switch

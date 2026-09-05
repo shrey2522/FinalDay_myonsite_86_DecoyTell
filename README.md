@@ -97,6 +97,29 @@ behavior are measured against deliberately engineered container configuration
 (disclosed in the output). It demonstrates the full pipeline end-to-end, not a
 production network.
 
+## Web dashboard (monitoring UI)
+
+FastAPI API + React/TypeScript/Tailwind/shadcn UI. Spec/design: ADR-0005.
+
+```
+pip install -r requirements-live.txt -r requirements-web.txt
+python loop_service.py                  # standalone loop process (waits for control)
+python -m uvicorn decoytell.api:app --port 8000
+cd web && npm install && npm run build  # UI served at http://localhost:8000/
+```
+
+Or everything containerized: `docker compose up -d --build` → open
+**http://localhost:8000** (the API container serves the API and the built UI).
+
+**Views**: Dashboard (verdicts, loop start/stop, verify now) · Scenarios (full reports:
+attributes ✓/✗, fingerprints, corrections with reasoning) · Live loop (real vs decoy
+probes per cycle, fixes, timestamps) · Pair matrix (the 10 pairwise joint checks) ·
+Observations (recent window streams). Polling every 3s.
+
+**Architecture (ADR-0005)**: the loop is its own process persisting every cycle to
+PostgreSQL (`loop_events`) and polling a `loop_control` row; the API only reads events
+and toggles the control row — the loop survives API restarts and vice versa.
+
 **Exit codes (scriptable gate):**
 
 | Code | Meaning |
