@@ -109,7 +109,12 @@ def render_text(report):
         lines.append("BLOCKED: %s is not correctable into tolerance" % name)
 
     final = report.get("final")
-    if final is not None:
+    if report["verdict"] == "INSUFFICIENT_DATA":
+        lines.append(
+            "INSUFFICIENT DATA: recent window has %d observations (< %d minimum) - cannot certify"
+            % (report["window_size"], report["thresholds"]["min_window_observations"])
+        )
+    elif final is not None:
         final_failures = [a["name"] for a in final["attributes"] if not a["in_tolerance"]]
         final_pairs = [p for p in final["pairs"] if p["fingerprint"]]
         if not final_failures and not final_pairs:

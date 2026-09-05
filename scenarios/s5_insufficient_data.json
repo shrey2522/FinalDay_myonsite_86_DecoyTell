@@ -1,0 +1,14 @@
+{
+  "id": "s5_insufficient_data",
+  "seed": 5001,
+  "observations": 50,
+  "decoy": {
+    "service_banner": "Apache/2.4.54 (Debian)",
+    "patch_cadence_days": 12,
+    "timing_band": "fast",
+    "account_age_days": 810,
+    "monitoring_behavior": "immediate"
+  },
+  "expected_verdict": "INSUFFICIENT_DATA",
+  "note": "Not enough evidence to certify: the real asset's recent window is far below the 100-observation minimum, so the tool refuses to bless the decoy rather than passing it on no data."
+}

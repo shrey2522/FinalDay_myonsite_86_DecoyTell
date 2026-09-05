@@ -19,7 +19,7 @@ it works**.
 | T1 | Engine + harmless PASS path | `PASS` (and `INSUFFICIENT_DATA` guard) | [01-t1-engine-and-pass-path.md](01-t1-engine-and-pass-path.md) |
 | T2 | Scoped auto-correction + single-drift repair | `CORRECTED` (individual check) | [02-t2-auto-correction.md](02-t2-auto-correction.md) |
 | T3 | Pair-fingerprint path (the "aha") | `CORRECTED` (joint check only) | [03-t3-pair-fingerprint.md](03-t3-pair-fingerprint.md) |
-| T4 | Unsafe / insufficient-data + scriptable CLI + proof | `UNSAFE` | _pending_ |
+| T4 | Unsafe / insufficient-data + scriptable CLI + proof | `UNSAFE` / `INSUFFICIENT_DATA` + exit codes + JSON proof | [04-t4-unsafe-cli-proof.md](04-t4-unsafe-cli-proof.md) |
 | T5 | Test hardening + README + Docker | — | _pending_ |
 
 ## The core idea in one breath

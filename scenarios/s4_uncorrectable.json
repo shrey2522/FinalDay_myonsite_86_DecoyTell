@@ -1,0 +1,16 @@
+{
+  "id": "s4_uncorrectable",
+  "seed": 4001,
+  "correctable": {
+    "timing_band": false
+  },
+  "decoy": {
+    "service_banner": "Apache/2.4.54 (Debian)",
+    "patch_cadence_days": 12,
+    "timing_band": "slow",
+    "account_age_days": 810,
+    "monitoring_behavior": "immediate"
+  },
+  "expected_verdict": "UNSAFE",
+  "note": "Unsafe to expose: timing_band=slow + monitoring_behavior=immediate is a fingerprint (observed 0, expected ~13), but here the decoy's response timing is infra-locked (declared non-correctable), and monitoring_behavior is non-correctable too. No scoped repair exists -> the decoy cannot be corrected into tolerance."
+}
