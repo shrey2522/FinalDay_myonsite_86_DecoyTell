@@ -20,7 +20,9 @@ it works**.
 | T2 | Scoped auto-correction + single-drift repair | `CORRECTED` (individual check) | [02-t2-auto-correction.md](02-t2-auto-correction.md) |
 | T3 | Pair-fingerprint path (the "aha") | `CORRECTED` (joint check only) | [03-t3-pair-fingerprint.md](03-t3-pair-fingerprint.md) |
 | T4 | Unsafe / insufficient-data + scriptable CLI + proof | `UNSAFE` / `INSUFFICIENT_DATA` + exit codes + JSON proof | [04-t4-unsafe-cli-proof.md](04-t4-unsafe-cli-proof.md) |
-| T5 | Test hardening + README + Docker | — | _pending_ |
+| T5 | Test hardening + README + Docker | 26 tests, byte-identical determinism, containerized verification | [05-t5-hardening-docker.md](05-t5-hardening-docker.md) |
+
+**All five tickets implemented, tested, and committed.**
 
 ## The core idea in one breath
 

@@ -60,6 +60,30 @@ class CliTests(unittest.TestCase):
             self.assertIn(key, report)
         self.assertEqual(report["verdict"], "CORRECTED")
 
+    def test_full_demo_output_is_byte_identical_across_runs(self):
+        with tempfile.TemporaryDirectory() as out:
+            first = io.StringIO()
+            second = io.StringIO()
+            with contextlib.redirect_stdout(first):
+                self.assertEqual(self._run(["--json-dir", out]), 2)
+            with contextlib.redirect_stdout(second):
+                self.assertEqual(self._run(["--json-dir", out]), 2)
+            self.assertEqual(first.getvalue(), second.getvalue())
+
+    def test_json_exports_are_byte_identical_across_runs(self):
+        with tempfile.TemporaryDirectory() as out:
+            with contextlib.redirect_stdout(io.StringIO()):
+                self._run(["--json-dir", out])
+            exports = {}
+            for path in os.listdir(out):
+                with open(os.path.join(out, path), "rb") as fh:
+                    exports[path] = fh.read()
+            with contextlib.redirect_stdout(io.StringIO()):
+                self._run(["--json-dir", out])
+            for path in exports:
+                with open(os.path.join(out, path), "rb") as fh:
+                    self.assertEqual(exports[path], fh.read(), path)
+
 
 if __name__ == "__main__":
     unittest.main()
