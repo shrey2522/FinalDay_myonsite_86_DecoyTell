@@ -56,5 +56,22 @@ services:
       - real-asset
       - decoy
 
+  loop:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    command: ["python", "loop_service.py", "--interval", "5"]
+    environment:
+      DECOYTELL_DSN: postgres://decoytell:decoytell@postgres:5432/decoytell
+      DECOYTELL_REAL_HOST: real-asset
+      DECOYTELL_REAL_PORT: "8443"
+      DECOYTELL_DECOY_HOST: decoy
+      DECOYTELL_DECOY_PORT: "8443"
+    depends_on:
+      - postgres
+      - real-asset
+      - decoy
+    restart: unless-stopped
+
 volumes:
   pgdata:

@@ -28,11 +28,13 @@ class StoreTests(unittest.TestCase):
             cur.execute("DELETE FROM observations WHERE target LIKE 'test-%%'")
             cur.execute("SELECT COALESCE(MAX(id), 0) FROM loop_events")
             self._baseline_event_id = cur.fetchone()[0]
+        self._saved_running = self.store.loop_running()
         self.store.conn.commit()
 
     def tearDown(self):
         with self.store.conn.cursor() as cur:
             cur.execute("DELETE FROM loop_events WHERE id > %s", (self._baseline_event_id,))
+        self.store.set_loop_running(self._saved_running)
         self.store.conn.commit()
         self.store.conn.close()
 
@@ -79,7 +81,8 @@ class StoreTests(unittest.TestCase):
         self.assertEqual(len(self.store.recent_window(days=90, target=self.REAL)), 1)
         self.assertEqual(len(self.store.recent_window(days=300, target=self.REAL)), 2)
 
-    def test_loop_control_defaults_to_stopped_and_toggles(self):
+    def test_loop_control_toggles(self):
+        self.store.set_loop_running(False)
         self.assertFalse(self.store.loop_running())
         self.store.set_loop_running(True)
         self.assertTrue(self.store.loop_running())

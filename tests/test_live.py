@@ -133,13 +133,15 @@ class LoopTests(unittest.TestCase):
         self.assertEqual(events[1]["verdict"], "PASS")
         self.assertEqual(events[2]["verdict"], "PASS")
 
-    def test_real_observation_appended_every_cycle(self):
+    def test_observations_appended_every_cycle_for_both_targets(self):
         run_loop(
             self.probe, self.store, self.control, REAL, DECOY,
             interval=0.0, cycles=3, log=lambda e: None,
         )
-        self.assertEqual(len(self.store.appends), 3)
-        self.assertTrue(all(t == "real-asset" for t, _ in self.store.appends))
+        self.assertEqual(len(self.store.appends), 6)
+        targets = [target for target, _ in self.store.appends]
+        self.assertEqual(targets.count("real-asset"), 3)
+        self.assertEqual(targets.count("decoy"), 3)
 
     def test_unapplicable_fix_never_reaches_the_control_plane(self):
         # account_age drift is fixable by the engine (correctable) but not

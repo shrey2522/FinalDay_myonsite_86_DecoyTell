@@ -85,6 +85,10 @@ def run_loop(probe, store, control, real, decoy, interval=2.0, cycles=None,
                 time.sleep(interval)
             continue
 
+        # Persist the decoy observation too, so the store documents both
+        # streams (real vs decoy) for the dashboard.
+        store.append(decoy_obs, target="decoy")
+
         history = store.recent_window(days=window_days, target="real-asset")
         verdict, corrections, _analysis = verify(history, decoy_obs)
 
