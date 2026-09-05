@@ -71,6 +71,32 @@ python demo.py --json-dir out  # also write out/<id>.json proof exports
 server that gets patched mid-run; the observer verifies the decoy every cycle and
 automatically catches + corrects the drift when the decoy fails to follow.
 
+## Live integration (Docker + PostgreSQL)
+
+Real servers, real probes, real persistence. Spec: [issue #7](https://github.com/shrey2522/FinalDay_myonsite_86_DecoyTell/issues/7).
+
+```
+docker compose up -d                      # real-asset (:8443), decoy (:8444), postgres (:5433)
+pip install -r requirements-live.txt      # the only live-layer dependency (psycopg)
+python collect_live.py --seed             # seed the store with the mock history, probe real-asset
+python live_demo.py --cycles 6 --interval 5   # real-time loop: probe -> verify -> correct -> re-verify
+python verify_live.py                     # end-to-end integration check (fails non-zero on any step)
+```
+
+What the loop does every cycle: probe the real-asset container and append the
+observation to PostgreSQL; probe the decoy; read the real asset's recent 90-day
+window from the store; verify the decoy via the engine; apply corrections to the
+decoy's **served identity** through the management plane; re-probe and re-verify;
+log the cycle. The engine, verdicts, and JSON proof are untouched — the live layer
+sits entirely below the `verify(history, decoy)` seam (ADR-0003 v2).
+
+**Honest framing**: this is real probing of containerized servers inside an isolated
+Docker environment — banner, TLS-cert account age, and latency are genuine
+measurements; patch cadence is inferred from a version->release map; timing and scan
+behavior are measured against deliberately engineered container configuration
+(disclosed in the output). It demonstrates the full pipeline end-to-end, not a
+production network.
+
 **Exit codes (scriptable gate):**
 
 | Code | Meaning |
