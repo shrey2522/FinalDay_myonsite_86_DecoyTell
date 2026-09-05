@@ -72,12 +72,17 @@ def render_text(report):
     for attr in report["attributes"]:
         name = attr["name"]
         value = _fmt(attr["decoy_value"])
-        if attr["kind"] == "numeric":
+        if attr.get("no_window"):
+            mark = "--"
+            detail = "no window data (cannot certify)"
+        elif attr["kind"] == "numeric":
             lo, hi = _fmt(attr["band"][0]), _fmt(attr["band"][1])
-            detail = "in [%s, %s]" % (lo, hi)
+            unit = " " + attr["unit"] if attr.get("unit") else ""
+            detail = "in [%s, %s]%s" % (lo, hi, unit)
+            mark = "OK " if attr["in_tolerance"] else "DRIFT"
         else:
             detail = "seen %d/%d" % (attr["count"], attr["window_size"])
-        mark = "OK " if attr["in_tolerance"] else "DRIFT"
+            mark = "OK " if attr["in_tolerance"] else "DRIFT"
         lines.append(
             "  %-22s %-24s  %s  %s"
             % (name, value, mark, detail)

@@ -15,6 +15,7 @@ ATTRIBUTES = [
     {
         "name": "patch_cadence_days",
         "kind": "numeric",
+        "unit": "days",
         "correctable": True,
         "fix_action": "apply upstream security patch",
     },
@@ -28,6 +29,7 @@ ATTRIBUTES = [
     {
         "name": "account_age_days",
         "kind": "numeric",
+        "unit": "days",
         "correctable": True,
         "fix_action": "update cert/account-age metadata",
     },
@@ -43,6 +45,9 @@ ATTRIBUTES = [
 THRESHOLDS = {
     "recent_window_days": 90,
     "min_window_observations": 100,
+    # History is sampled densely (~1.9 obs/day) on purpose: the 90-day recent
+    # window must retain >= 100 observations for certification, so a sparse
+    # history of a few hundred observations over 730 days would never certify.
     "numeric_lower_percentile": 0.05,
     "numeric_upper_percentile": 0.95,
     "categorical_min_count": 2,

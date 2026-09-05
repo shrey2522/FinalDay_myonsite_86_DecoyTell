@@ -38,19 +38,21 @@ def _fingerprint_partner(analysis, target):
     return None
 
 
-def _conditioning_pool(window, decoy, target, partner):
-    """Progressive relaxation: exact other-categorical match, then partner,
-    then the whole window. Each level must have enough observations to be a
-    meaningful reference."""
+def _conditioning_pool(window, decoy, target, partner, passing_categoricals):
+    """Progressive relaxation: exact other-passing-categorical match, then
+    partner, then the whole window. Each level must have enough observations
+    to be a meaningful reference. Only attributes that are currently passing
+    marginally are used for the exact match, so the correction target is not
+    biased by attributes that are themselves still drifted."""
     exact = []
     for obs in window:
         if partner is not None and getattr(obs, partner) != decoy[partner]:
             continue
         matched = True
-        for name in attribute_names():
+        for name in passing_categoricals:
             if name == target or name == partner:
                 continue
-            if kind_of(name) == "categorical" and getattr(obs, name) != decoy[name]:
+            if getattr(obs, name) != decoy[name]:
                 matched = False
                 break
         if matched:
@@ -68,7 +70,17 @@ def _conditioning_pool(window, decoy, target, partner):
 
 def correction_target(analysis, window, decoy, target):
     partner = _fingerprint_partner(analysis, target)
-    pool = _conditioning_pool(window, decoy, target, partner)
+    failing_marginal = {
+        result["name"]
+        for result in analysis["attributes"]
+        if result["in_tolerance"] is False
+    }
+    passing_categoricals = [
+        name
+        for name in attribute_names()
+        if kind_of(name) == "categorical" and name not in failing_marginal
+    ]
+    pool = _conditioning_pool(window, decoy, target, partner, passing_categoricals)
     values = [getattr(obs, target) for obs in pool]
     if not values:
         return None
@@ -81,11 +93,11 @@ def _recent_window(history):
     return [obs for obs in history if obs.days_ago <= THRESHOLDS["recent_window_days"]]
 
 
-def correct(schema, history, decoy, analysis, analyze, correctable_overrides=None):
+def correct(attributes, history, decoy, analysis, analyze_fn, correctable_overrides=None):
     """Repair drift in place. Returns (verdict, corrections, final_decoy,
     blocked_attributes).
 
-    ``analyze`` is injected to avoid a circular import; it re-runs the full
+    ``analyze_fn`` is injected to avoid a circular import; it re-runs the full
     check set after every fix.
     """
     overrides = correctable_overrides or {}
@@ -95,14 +107,14 @@ def correct(schema, history, decoy, analysis, analyze, correctable_overrides=Non
     budget = THRESHOLDS["correction_budget"]
 
     for _ in range(budget):
-        analysis = analyze(schema, history, current)
+        analysis = analyze_fn(attributes, history, current)
         if analysis["insufficient"]:
             return "INSUFFICIENT_DATA", corrections, current, []
         if not analysis["has_drift"]:
             return ("CORRECTED" if corrections else "PASS"), corrections, current, []
 
         failing = failing_attributes(analysis)
-        by_name = {a["name"]: a for a in schema}
+        by_name = {a["name"]: a for a in attributes}
         target = None
         for name in failing:
             if overrides.get(name, by_name[name]["correctable"]):
@@ -117,7 +129,7 @@ def correct(schema, history, decoy, analysis, analyze, correctable_overrides=Non
             return "UNSAFE", corrections, current, [target]
 
         current[target] = new_value
-        post = analyze(schema, history, current)
+        post = analyze_fn(attributes, history, current)
         re_verified = (not post["insufficient"]) and (not post["has_drift"])
         corrections.append(
             {

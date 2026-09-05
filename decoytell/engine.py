@@ -38,7 +38,7 @@ def _recent_window(history, days):
     return [o for o in history if o.days_ago <= days]
 
 
-def analyze(schema, history, decoy):
+def analyze(attributes, history, decoy):
     """Compare the decoy tuple against the real asset's recent window.
 
     Returns a dict with per-attribute results, pairwise findings, and drift
@@ -52,6 +52,17 @@ def analyze(schema, history, decoy):
     pair_findings = []
 
     if len(window) < min_obs:
+        for attr in attributes:
+            attr_results.append(
+                {
+                    "name": attr["name"],
+                    "kind": attr["kind"],
+                    "unit": attr.get("unit"),
+                    "decoy_value": decoy[attr["name"]],
+                    "in_tolerance": None,
+                    "no_window": True,
+                }
+            )
         return {
             "window_size": len(window),
             "attributes": attr_results,
@@ -59,7 +70,7 @@ def analyze(schema, history, decoy):
             "insufficient": True,
         }
 
-    for attr in schema:
+    for attr in attributes:
         name = attr["name"]
         value = decoy[name]
         if attr["kind"] == "numeric":
@@ -71,6 +82,7 @@ def analyze(schema, history, decoy):
                 {
                     "name": name,
                     "kind": "numeric",
+                    "unit": attr.get("unit"),
                     "decoy_value": value,
                     "in_tolerance": in_tolerance,
                     "band": [round(lo, 1), round(hi, 1)],
