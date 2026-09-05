@@ -52,5 +52,16 @@ def validate_scenario(scenario):
     if expected is not None and expected not in ALLOWED_VERDICTS:
         errors.append("'expected_verdict' must be one of %s" % sorted(ALLOWED_VERDICTS))
 
+    correctable = scenario.get("correctable")
+    if correctable is not None:
+        if not isinstance(correctable, dict):
+            errors.append("'correctable' must be an object")
+        else:
+            for name, flag in correctable.items():
+                if name not in attribute_names():
+                    errors.append("'correctable' names unknown attribute %r" % (name,))
+                elif not isinstance(flag, bool):
+                    errors.append("'correctable.%s' must be a boolean" % (name,))
+
     if errors:
         raise ValueError("invalid scenario: " + "; ".join(errors))

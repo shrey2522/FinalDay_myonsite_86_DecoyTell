@@ -18,6 +18,7 @@ from .schema import (
 from .generator import generate_history
 from .validate import validate_scenario
 from .report import build_report
+from .corrector import correct
 
 
 def _percentile(sorted_vals, p):
@@ -143,9 +144,22 @@ def run_scenario(config):
 
     if analysis["insufficient"]:
         verdict = "INSUFFICIENT_DATA"
+        corrections = []
+        blocked = []
+        final_analysis = analysis
     elif analysis["has_drift"]:
-        verdict = "DRIFTED"
+        verdict, corrections, final_decoy, blocked = correct(
+            ATTRIBUTES, history, config["decoy"], analysis, analyze,
+            config.get("correctable", {}),
+        )
+        final_analysis = analyze(ATTRIBUTES, history, final_decoy)
     else:
         verdict = "PASS"
+        corrections = []
+        blocked = []
+        final_analysis = analysis
 
-    return build_report(config, analysis, verdict, corrections=[], history_size=len(history))
+    return build_report(
+        config, analysis, verdict, corrections, len(history),
+        final_analysis=final_analysis, blocked=blocked,
+    )

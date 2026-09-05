@@ -30,12 +30,13 @@ class SeamBehaviorTests(unittest.TestCase):
         self.assertTrue(all(a["in_tolerance"] for a in report["attributes"]))
         self.assertFalse(any(p["fingerprint"] for p in report["pairs"]))
 
-    def test_single_attribute_drift_is_named_and_flagged(self):
+    def test_single_attribute_drift_is_named_and_corrected(self):
         report = run_scenario(_config(decoy={"service_banner": "Apache/2.4.54 (Debian)", "patch_cadence_days": 300, "timing_band": "fast", "account_age_days": 810, "monitoring_behavior": "immediate"}))
-        self.assertEqual(report["verdict"], "DRIFTED")
+        self.assertEqual(report["verdict"], "CORRECTED")
         by_name = {a["name"]: a for a in report["attributes"]}
         self.assertFalse(by_name["patch_cadence_days"]["in_tolerance"])
         self.assertTrue(by_name["service_banner"]["in_tolerance"])
+        self.assertEqual(report["corrections"][0]["attribute"], "patch_cadence_days")
 
     def test_categorical_value_never_seen_is_flagged(self):
         report = run_scenario(_config(decoy={"service_banner": "nginx/1.18.0", "patch_cadence_days": 12, "timing_band": "fast", "account_age_days": 810, "monitoring_behavior": "immediate"}))

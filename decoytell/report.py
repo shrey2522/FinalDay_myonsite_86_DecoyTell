@@ -15,7 +15,8 @@ _REPORTED_THRESHOLDS = (
 )
 
 
-def build_report(config, analysis, verdict, corrections, history_size=None):
+def build_report(config, analysis, verdict, corrections, history_size=None,
+                 final_analysis=None, blocked=None):
     return {
         "scenario_id": config["id"],
         "note": config.get("note", ""),
@@ -29,6 +30,18 @@ def build_report(config, analysis, verdict, corrections, history_size=None):
         "attributes": analysis["attributes"],
         "pairs": analysis["pairs"],
         "corrections": corrections,
+        "blocked_attributes": blocked or [],
+        "final": _analysis_summary(final_analysis),
+    }
+
+
+def _analysis_summary(analysis):
+    if analysis is None:
+        return None
+    return {
+        "window_size": analysis["window_size"],
+        "attributes": analysis["attributes"],
+        "pairs": analysis["pairs"],
     }
 
 
@@ -91,6 +104,19 @@ def render_text(report):
     for fix in report["corrections"]:
         lines.append("FIX %s: %s -> %s (%s)" % (fix["attribute"], fix["before"], fix["after"], fix["action"]))
         lines.append("  re-verified: %s" % fix["re_verified"])
+
+    for name in report.get("blocked_attributes", []):
+        lines.append("BLOCKED: %s is not correctable into tolerance" % name)
+
+    final = report.get("final")
+    if final is not None:
+        final_failures = [a["name"] for a in final["attributes"] if not a["in_tolerance"]]
+        final_pairs = [p for p in final["pairs"] if p["fingerprint"]]
+        if not final_failures and not final_pairs:
+            lines.append(
+                "RE-VERIFY: all %d individual checks and all %d pairs OK -> PASSING"
+                % (len(final["attributes"]), len(final["pairs"]))
+            )
 
     lines.append("-" * 64)
     verdict = report["verdict"]
