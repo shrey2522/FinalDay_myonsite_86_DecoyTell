@@ -32,7 +32,7 @@ def main(argv=None):
     paths = glob.glob(os.path.join(SCENARIO_DIR, "*.json"))
     reports = []
     for config in load_scenarios(paths):
-        if args.scenario and config["id"] != args.scenario:
+        if args.scenario and not config["id"].startswith(args.scenario):
             continue
         reports.append(run_scenario(config))
 

@@ -1,0 +1,13 @@
+{
+  "id": "s3_pair_fingerprint",
+  "seed": 3001,
+  "decoy": {
+    "service_banner": "Apache/2.4.54 (Debian)",
+    "patch_cadence_days": 12,
+    "timing_band": "slow",
+    "account_age_days": 810,
+    "monitoring_behavior": "immediate"
+  },
+  "expected_verdict": "CORRECTED",
+  "note": "Pair fingerprint: timing_band=slow and monitoring_behavior=immediate are each individually within tolerance, but the real asset never exhibits that combination (observed 0, expected ~10.9). The joint check must catch it, name both attributes, and correct timing_band to the conditional mode (fast)."
+}
