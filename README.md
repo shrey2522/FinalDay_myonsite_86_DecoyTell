@@ -67,6 +67,10 @@ python demo.py --json-dir out  # also write out/<id>.json proof exports
 | `s4_uncorrectable` | a drift that cannot be repaired (non-correctable attribute) | `UNSAFE` |
 | `s5_insufficient_data` | not enough evidence to certify | `INSUFFICIENT_DATA` |
 
+**Continuous observation demo** (`python observe_demo.py`): a simulated live real
+server that gets patched mid-run; the observer verifies the decoy every cycle and
+automatically catches + corrects the drift when the decoy fails to follow.
+
 **Exit codes (scriptable gate):**
 
 | Code | Meaning |
@@ -107,7 +111,9 @@ A clean run: `docker run --rm decoytell sh -c "python demo.py --scenario s1"` (e
 
 ```
 demo.py              CLI entry + exit codes + JSON export
-decoytell/           schema, generator, engine (seam), corrector, report, validate
+observe_demo.py      continuous-observation demo (live-feed simulation)
+decoytell/           schema, generator, engine (seam), corrector, report,
+                     validate, observe
 scenarios/           declarative JSON scenarios (the declared model, tweakable)
 tests/               behavioral suite at the run_scenario seam
 summary/             per-ticket implementation writeups (problem, intent, alternatives)

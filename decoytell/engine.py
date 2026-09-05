@@ -143,6 +143,25 @@ def analyze(attributes, history, decoy):
     }
 
 
+def verify(history, decoy, correctable_overrides=None):
+    """Verify a decoy state against an already-collected history (no
+    regeneration). Returns (verdict, corrections, analysis).
+
+    This is the function a continuous observation loop calls each cycle, and
+    the same checks/correction path ``run_scenario`` uses.
+    """
+    analysis = analyze(ATTRIBUTES, history, decoy)
+    if analysis["insufficient"]:
+        return "INSUFFICIENT_DATA", [], analysis
+    if not analysis["has_drift"]:
+        return "PASS", [], analysis
+    verdict, corrections, _final_decoy, _blocked = correct(
+        ATTRIBUTES, history, decoy, analysis, analyze,
+        correctable_overrides or {},
+    )
+    return verdict, corrections, analysis
+
+
 def run_scenario(config):
     """The single verification seam.
 
