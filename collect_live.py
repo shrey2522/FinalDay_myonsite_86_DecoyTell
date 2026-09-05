@@ -32,8 +32,9 @@ def main(argv=None):
     store = ObservationStore(psycopg.connect(args.dsn))
     store.init_schema()
     if args.seed:
-        store.seed(generate_history(SEED), target="real-asset")
-        print("seeded mock history (%d observations)" % 1400)
+        history = generate_history(SEED)
+        store.seed(history, target="real-asset")
+        print("seeded mock history (%d observations)" % len(history))
 
     observation = probe(args.host, args.port)
     store.append(observation, target=args.target)

@@ -14,6 +14,8 @@ import ssl
 import tempfile
 import time
 
+from .netutil import tls_context
+
 VERSION_RELEASE_DAYS = {
     "Apache/2.4.29": 730,
     "Apache/2.4.41": 365,
@@ -25,13 +27,6 @@ TIMING_FAST_MS = 150.0
 TIMING_NOMINAL_MS = 900.0
 DEFAULT_TIMEOUT = 3.0
 DEFAULT_BURST = 6
-
-
-def _context():
-    ctx = ssl.create_default_context()
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
-    return ctx
 
 
 def _decode_cert(sock):
@@ -62,7 +57,7 @@ def _decode_cert(sock):
 
 
 def _request(host, port, timeout=DEFAULT_TIMEOUT):
-    conn = http.client.HTTPSConnection(host, port, timeout=timeout, context=_context())
+    conn = http.client.HTTPSConnection(host, port, timeout=timeout, context=tls_context())
     start = time.perf_counter()
     conn.request("GET", "/", headers={"User-Agent": "decoytell-probe/1.0"})
     try:

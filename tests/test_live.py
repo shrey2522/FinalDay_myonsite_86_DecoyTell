@@ -82,9 +82,11 @@ class MapFixTests(unittest.TestCase):
             map_fix_to_identity({"attribute": "timing_band", "after": "fast"}, window),
             {"timing_ms": 0.0},
         )
-        self.assertEqual(
-            map_fix_to_identity({"attribute": "monitoring_behavior", "after": "silent"}, window),
-            {"monitoring": "silent"},
+
+    def test_monitoring_is_not_applicable(self):
+        # monitoring_behavior is host-level and declared non-correctable.
+        self.assertIsNone(
+            map_fix_to_identity({"attribute": "monitoring_behavior", "after": "silent"}, [])
         )
 
     def test_cadence_fix_maps_to_modal_banner(self):
@@ -138,6 +140,25 @@ class LoopTests(unittest.TestCase):
         )
         self.assertEqual(len(self.store.appends), 3)
         self.assertTrue(all(t == "real-asset" for t, _ in self.store.appends))
+
+    def test_unapplicable_fix_never_reaches_the_control_plane(self):
+        # account_age drift is fixable by the engine (correctable) but not
+        # applicable on a live container (cert is baked): the loop must mark
+        # it "cannot apply" and make no identity change.
+        age_drift_probe = FakeProbe(
+            REAL_OBS,
+            [{"service_banner": "Apache/2.4.54 (Debian)", "patch_cadence_days": 12.0,
+              "timing_band": "fast", "account_age_days": 10.0,
+              "monitoring_behavior": "immediate"}] * 5,
+        )
+        events = run_loop(
+            age_drift_probe, self.store, self.control, REAL, DECOY,
+            interval=0.0, cycles=1, log=lambda e: None,
+        )
+        self.assertEqual(events[0]["verdict"], "CORRECTED")
+        self.assertEqual(self.control.applied, [])
+        self.assertEqual(events[0]["fixes"][0]["applied"], False)
+        self.assertIn("not applicable", events[0]["fixes"][0]["reason"])
 
     def test_events_carry_timestamp_and_cycle(self):
         events = run_loop(

@@ -19,15 +19,14 @@ TIMING_MS_FOR_BAND = {"fast": 0.0, "nominal": 300.0, "slow": 1500.0}
 def map_fix_to_identity(fix, window):
     """Translate an engine correction into identity changes a live server can
     actually apply. Returns None when the fix is not applicable on a live
-    container (e.g. account age baked into a certificate)."""
+    container (e.g. account age baked into a certificate, or monitoring
+    behavior, which is host-level and declared non-correctable)."""
     attribute = fix["attribute"]
     after = fix["after"]
     if attribute == "service_banner":
         return {"banner": after}
     if attribute == "timing_band":
         return {"timing_ms": TIMING_MS_FOR_BAND[after]}
-    if attribute == "monitoring_behavior":
-        return {"monitoring": after}
     if attribute == "patch_cadence_days":
         # Cadence is derived from the served software version on a live
         # server; pick the banner the real asset most commonly serves so the
@@ -60,10 +59,19 @@ def run_loop(probe, store, control, real, decoy, interval=2.0, cycles=None,
         timestamp = datetime.now(timezone.utc).isoformat(timespec="seconds")
 
         real_obs = probe(*real)
+        if _unreachable(real_obs):
+            event = {"cycle": cycle, "timestamp": timestamp, "verdict": "UNREACHABLE",
+                     "recheck": "UNREACHABLE", "fixes": []}
+            events.append(event)
+            log(event)
+            if cycles is None or cycle < cycles:
+                time.sleep(interval)
+            continue
+
         store.append(real_obs, target="real-asset")
         decoy_obs = probe(*decoy)
 
-        if _unreachable(real_obs) or _unreachable(decoy_obs):
+        if _unreachable(decoy_obs):
             event = {"cycle": cycle, "timestamp": timestamp, "verdict": "UNREACHABLE",
                      "recheck": "UNREACHABLE", "fixes": []}
             events.append(event)
@@ -76,14 +84,15 @@ def run_loop(probe, store, control, real, decoy, interval=2.0, cycles=None,
         verdict, corrections, _analysis = verify(history, decoy_obs)
 
         applied = []
-        for fix in corrections:
-            changes = map_fix_to_identity(fix, history)
-            if changes is None:
-                applied.append({**fix, "applied": False,
-                                "reason": "not applicable on live container"})
-                continue
-            ok = bool(control(changes))
-            applied.append({**fix, "applied": ok})
+        if verdict == "CORRECTED":
+            for fix in corrections:
+                changes = map_fix_to_identity(fix, history)
+                if changes is None:
+                    applied.append({**fix, "applied": False,
+                                    "reason": "not applicable on live container"})
+                    continue
+                ok = bool(control(changes))
+                applied.append({**fix, "applied": ok})
 
         if applied:
             fresh = probe(*decoy)

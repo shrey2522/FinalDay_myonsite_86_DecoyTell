@@ -103,6 +103,9 @@ def main():
         assert real["account_age_days"] > 700, "real-asset account age unexpected: %s" % real["account_age_days"]
 
     print("DecoyTell live integration verification")
+    print("Honest framing: real probing of containerized servers in an isolated Docker")
+    print("environment; timing/scan attributes are measured against engineered")
+    print("container configuration, not a production network.")
     print("-" * 60)
     check("containers up (real-asset, decoy, postgres healthy)", containers_up)
     check("store reachable, seeded window >= 100 obs", store_reachable_and_seedable)

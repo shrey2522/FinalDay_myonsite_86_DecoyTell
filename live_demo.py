@@ -38,6 +38,12 @@ def main(argv=None):
     if psycopg is None:
         raise SystemExit("psycopg not installed (pip install -r requirements-live.txt)")
 
+    print("DecoyTell live loop - real probing of containerized servers in an isolated")
+    print("Docker environment. Banner, TLS-cert account age and latency are genuine")
+    print("measurements; patch cadence is inferred from a version->release map; timing")
+    print("and scan behavior are measured against engineered container configuration.")
+    print("-" * 70)
+
     store = ObservationStore(psycopg.connect(args.dsn))
     store.init_schema()
 

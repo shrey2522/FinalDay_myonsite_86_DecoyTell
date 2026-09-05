@@ -85,5 +85,40 @@ class LiveEndpointTests(unittest.TestCase):
             server.shutdown()
 
 
+class ContainerProbeTests(unittest.TestCase):
+    """The prober against the real Docker containers (skipped when the stack
+    is down or psycopg/Docker is unavailable)."""
+
+    LIVE_HOST = os.environ.get("DECOYTELL_LIVE_HOST", "localhost")
+    REAL_PORT = 8443
+    DECOY_PORT = 8444
+
+    @classmethod
+    def setUpClass(cls):
+        try:
+            cls.real = P.probe(cls.LIVE_HOST, cls.REAL_PORT)
+            cls.decoy = P.probe(cls.LIVE_HOST, cls.DECOY_PORT)
+            cls.available = cls.real["service_banner"] is not None and cls.decoy["service_banner"] is not None
+        except Exception:
+            cls.available = False
+
+    def test_probe_returns_observation_shape_from_real_container(self):
+        if not self.available:
+            self.skipTest("live containers not reachable (docker compose up -d)")
+        for key in ("service_banner", "patch_cadence_days", "timing_band",
+                    "account_age_days", "monitoring_behavior"):
+            self.assertIn(key, self.real)
+        self.assertEqual(self.real["service_banner"], "Apache/2.4.54 (Debian)")
+        self.assertGreater(self.real["account_age_days"], 700)
+
+    def test_probe_returns_observation_shape_from_decoy_container(self):
+        if not self.available:
+            self.skipTest("live containers not reachable (docker compose up -d)")
+        for key in ("service_banner", "patch_cadence_days", "timing_band",
+                    "account_age_days", "monitoring_behavior"):
+            self.assertIn(key, self.decoy)
+        self.assertIsNotNone(self.decoy["service_banner"])
+
+
 if __name__ == "__main__":
     unittest.main()

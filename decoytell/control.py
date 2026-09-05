@@ -7,18 +7,12 @@ fix actions.
 
 import http.client
 import json
-import ssl
 
-
-def _context():
-    ctx = ssl.create_default_context()
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
-    return ctx
+from .netutil import tls_context
 
 
 def apply(host, port, changes, timeout=5.0):
-    conn = http.client.HTTPSConnection(host, port, timeout=timeout, context=_context())
+    conn = http.client.HTTPSConnection(host, port, timeout=timeout, context=tls_context())
     body = json.dumps(changes)
     conn.request(
         "POST",

@@ -88,8 +88,8 @@ class ObservationStore:
         """The last ``days`` of observations, as engine ``Observation``s."""
         now = datetime.datetime.now(datetime.timezone.utc)
         cutoff = now - datetime.timedelta(days=days)
-        rows = "service_banner, patch_cadence_days, timing_band, account_age_days, monitoring_behavior"
-        sql = "SELECT observed_at, %s FROM observations WHERE observed_at >= %%s" % rows
+        columns = ", ".join(_FIELDS)
+        sql = "SELECT observed_at, %s FROM observations WHERE observed_at >= %%s" % columns
         params = [cutoff]
         if target is not None:
             sql += " AND target = %s"
