@@ -1,0 +1,43 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: decoytell
+      POSTGRES_PASSWORD: decoytell
+      POSTGRES_DB: decoytell
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U decoytell"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+  real-asset:
+    build:
+      context: ./containers/identity
+      args:
+        ACCOUNT_AGE_DAYS: 800
+    environment:
+      BANNER: "Apache/2.4.54 (Debian)"
+      TIMING_MS: "0"
+      MONITORING: immediate
+    ports:
+      - "8443:8443"
+
+  decoy:
+    build:
+      context: ./containers/identity
+      args:
+        ACCOUNT_AGE_DAYS: 100
+    environment:
+      BANNER: "Apache/2.4.41 (Debian)"
+      TIMING_MS: "1500"
+      MONITORING: rate_limited
+    ports:
+      - "8444:8443"
+
+volumes:
+  pgdata:

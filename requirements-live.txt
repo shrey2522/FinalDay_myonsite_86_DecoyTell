@@ -1,0 +1,2 @@
+# Live-layer dependency (ADR-0003 v2): installed only where the collector runs.
+psycopg[binary]>=3.1
