@@ -18,6 +18,9 @@ from .engine import run_scenario, verify
 from .live import run_loop
 from .probe import probe
 from .store import ObservationStore, psycopg
+from recon.candidates import build_candidates
+from recon.demo_recon import RESULT_TEXT, run_demo as run_recon_demo
+from recon.scoring import rank_candidates
 
 SCENARIO_DIR = os.environ.get("DECOYTELL_SCENARIO_DIR", "scenarios")
 WEB_DIST = os.environ.get("DECOYTELL_WEB_DIST", "web/dist")
@@ -148,6 +151,60 @@ def verify_now():
         log=lambda event: None,
     )
     return events[0]
+
+
+def _candidate_json(candidate):
+    return {
+        "name": candidate.name,
+        "banner_visible": candidate.banner_visible,
+        "patch_age_days": candidate.patch_age_days,
+        "reachable": candidate.reachable,
+        "has_auth": candidate.has_auth,
+        "subdomain_style": candidate.subdomain_style,
+        "is_decoy": candidate.is_decoy,
+    }
+
+
+@app.get("/api/recon")
+def recon():
+    """The attacker narrative: recon -> select -> observe -> verify, run
+    store-backed through the same code path as recon/demo_recon.py."""
+    store = _store()
+    result = run_recon_demo(
+        store=store,
+        real_window=None,
+        decoy_host=DECOY_HOST,
+        decoy_port=DECOY_PORT,
+        real_host=REAL_HOST,
+        real_port=REAL_PORT,
+        log=lambda line: None,
+    )
+    candidates = build_candidates(result.get("observation"))
+    ranked = rank_candidates(candidates)
+    verdict = result.get("verdict")
+    return {
+        "phases": result["phases"],
+        "exit_code": result["exit_code"],
+        "verdict": verdict,
+        "result_text": RESULT_TEXT.get(verdict, verdict),
+        "selected": _candidate_json(result["selected"]) if result.get("selected") else None,
+        "ranked": [
+            {"candidate": _candidate_json(candidate), "score": score, "reasons": reasons}
+            for candidate, score, reasons in ranked
+        ],
+        "observation": result.get("observation"),
+        "corrections": result.get("corrections", []),
+        "analysis": result.get("analysis"),
+    }
+
+
+@app.post("/api/control/inject")
+def control_inject():
+    """Demo helper: push the canonical drift into the live decoy through the
+    same control plane the loop uses (the CLI demo's live re-break)."""
+    changes = {"banner": "Apache/2.4.29 (Debian)", "timing_ms": 1500}
+    applied = bool(control_apply(DECOY_HOST, DECOY_PORT, changes))
+    return {"applied": applied, "changes": changes}
 
 
 if os.path.isdir(WEB_DIST):

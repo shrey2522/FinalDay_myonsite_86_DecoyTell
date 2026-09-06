@@ -26,4 +26,6 @@ export const api = {
   loopStart: () => post<{ running: boolean }>("/api/loop/start"),
   loopStop: () => post<{ running: boolean }>("/api/loop/stop"),
   verify: () => post<import("./types").LoopEvent>("/api/verify"),
+  recon: () => get<import("./types").ReconResult>("/api/recon"),
+  controlInject: () => post<{ applied: boolean; changes: Record<string, unknown> }>("/api/control/inject"),
 }
