@@ -48,7 +48,8 @@ def main(argv=None):
     broken = control_apply(
         args.decoy_host,
         args.decoy_port,
-        {"banner": "Apache/2.4.55 (Debian)", "timing_ms": 1500, "monitoring": "immediate"},
+        {"banner": "Apache/2.4.29 (Debian)", "timing_ms": 1500,
+         "monitoring": "immediate", "account_age_days": 800},
     )
 
     print("demo state prepared:")

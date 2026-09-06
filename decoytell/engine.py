@@ -91,7 +91,16 @@ def analyze(attributes, history, decoy):
         else:
             counts = Counter(getattr(o, name) for o in window)
             count = counts.get(value, 0)
-            in_tolerance = count >= THRESHOLDS["categorical_min_count"]
+            # Under-representation test: a categorical value must appear both
+            # at least categorical_min_count times and as at least
+            # categorical_min_share of the window. A value seen twice out of
+            # 174 (~1%) still passes the old absolute floor while being almost
+            # never shown by the real asset; the share floor catches it.
+            # Production version: a binomial/chi-square confidence bound.
+            in_tolerance = (
+                count >= THRESHOLDS["categorical_min_count"]
+                and count >= len(window) * THRESHOLDS["categorical_min_share"]
+            )
             attr_results.append(
                 {
                     "name": name,
@@ -118,7 +127,17 @@ def analyze(attributes, history, decoy):
             * counts[b].get(value_b, 0)
             / n
         )
-        is_fingerprint = observed == 0 and expected >= THRESHOLDS["joint_expected_min"]
+        # Under-representation test (replaces observed == 0): a pair is a
+        # fingerprint risk when the decoy's combination is significantly rarer
+        # than independence predicts -- observed < ratio * expected -- not only
+        # when it is structurally absent. A combination seen once with
+        # expected ~9 is still ~9x rarer than chance and must not certify.
+        # Production version: a chi-square/confidence bound on (observed,
+        # expected) rather than a fixed ratio.
+        is_fingerprint = (
+            expected >= THRESHOLDS["joint_expected_min"]
+            and observed < expected * THRESHOLDS["joint_under_ratio"]
+        )
         pair_findings.append(
             {
                 "attr_a": a,
@@ -153,6 +172,14 @@ def verify(history, decoy, correctable_overrides=None):
     analysis = analyze(ATTRIBUTES, history, decoy)
     if analysis["insufficient"]:
         return "INSUFFICIENT_DATA", [], analysis
+    # Staleness gate: refuse to certify when the real asset's most recent
+    # observation is older than stale_window_max_days. A crashed/stalled
+    # collector would otherwise certify the decoy against an aging window
+    # without anyone knowing it is stale.
+    window = _recent_window(history, THRESHOLDS["recent_window_days"])
+    newest = min(o.days_ago for o in window)
+    if newest > THRESHOLDS["stale_window_max_days"]:
+        return "STALE_DATA", [], analysis
     if not analysis["has_drift"]:
         return "PASS", [], analysis
     verdict, corrections, _final_decoy, _blocked = correct(

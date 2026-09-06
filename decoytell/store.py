@@ -57,6 +57,8 @@ CREATE TABLE IF NOT EXISTS loop_control (
     id INT PRIMARY KEY CHECK (id = 1),
     running BOOLEAN NOT NULL
 );
+CREATE INDEX IF NOT EXISTS idx_observations_observed_at
+    ON observations (observed_at);
 """
 
 _INSERT = """

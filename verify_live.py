@@ -67,12 +67,13 @@ def main():
 
     def decoy_probe_reflects_identity():
         broken = control_apply(DECOY_HOST, DECOY_PORT, {
-            "banner": "Apache/2.4.55 (Debian)", "timing_ms": 1500, "monitoring": "immediate",
+            "banner": "Apache/2.4.29 (Debian)", "timing_ms": 1500,
+            "monitoring": "immediate", "account_age_days": 800,
         })
         assert broken, "control plane refused the break"
         time.sleep(0.3)
         obs = probe(DECOY_HOST, DECOY_PORT)
-        assert obs["service_banner"] == "Apache/2.4.55 (Debian)", "decoy banner not applied: %r" % obs["service_banner"]
+        assert obs["service_banner"] == "Apache/2.4.29 (Debian)", "decoy banner not applied: %r" % obs["service_banner"]
         assert obs["timing_band"] == "slow", "decoy timing not applied: %s" % obs["timing_band"]
 
     def loop_catches_and_corrects():

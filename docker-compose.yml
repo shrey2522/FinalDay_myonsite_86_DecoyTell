@@ -5,6 +5,10 @@ services:
       POSTGRES_USER: decoytell
       POSTGRES_PASSWORD: decoytell
       POSTGRES_DB: decoytell
+    # NOTE: bound to all host interfaces (not 127.0.0.1) on purpose:
+    # Docker Desktop's loopback-only forward (127.0.0.1:5433) adds ~10s
+    # latency per connection on this WSL2 setup, breaking host tooling.
+    # Postgres remains protected by its own credentials + the control token.
     ports:
       - "5433:5432"
     volumes:
@@ -20,10 +24,13 @@ services:
       context: ./containers/identity
       args:
         ACCOUNT_AGE_DAYS: 800
+        CERT_CN: www.example.com
     environment:
       BANNER: "Apache/2.4.54 (Debian)"
       TIMING_MS: "0"
       MONITORING: immediate
+      CERT_CN: www.example.com
+      DECOYTELL_CONTROL_TOKEN: ${DECOYTELL_CONTROL_TOKEN:?set DECOYTELL_CONTROL_TOKEN in .env}
     ports:
       - "8443:8443"
 
@@ -32,10 +39,13 @@ services:
       context: ./containers/identity
       args:
         ACCOUNT_AGE_DAYS: 800
+        CERT_CN: legacy.example.com
     environment:
-      BANNER: "Apache/2.4.55 (Debian)"
+      BANNER: "Apache/2.4.29 (Debian)"
       TIMING_MS: "1500"
       MONITORING: immediate
+      CERT_CN: legacy.example.com
+      DECOYTELL_CONTROL_TOKEN: ${DECOYTELL_CONTROL_TOKEN:?set DECOYTELL_CONTROL_TOKEN in .env}
     ports:
       - "8444:8443"
 
@@ -49,6 +59,7 @@ services:
       DECOYTELL_REAL_PORT: "8443"
       DECOYTELL_DECOY_HOST: decoy
       DECOYTELL_DECOY_PORT: "8443"
+      DECOYTELL_CONTROL_TOKEN: ${DECOYTELL_CONTROL_TOKEN:?set DECOYTELL_CONTROL_TOKEN in .env}
     ports:
       - "8000:8000"
     depends_on:
@@ -67,6 +78,7 @@ services:
       DECOYTELL_REAL_PORT: "8443"
       DECOYTELL_DECOY_HOST: decoy
       DECOYTELL_DECOY_PORT: "8443"
+      DECOYTELL_CONTROL_TOKEN: ${DECOYTELL_CONTROL_TOKEN:?set DECOYTELL_CONTROL_TOKEN in .env}
     depends_on:
       - postgres
       - real-asset

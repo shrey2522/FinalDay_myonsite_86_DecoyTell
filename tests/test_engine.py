@@ -43,6 +43,34 @@ class SeamBehaviorTests(unittest.TestCase):
         by_name = {a["name"]: a for a in report["attributes"]}
         self.assertFalse(by_name["service_banner"]["in_tolerance"])
 
+    def test_verify_refuses_stale_window(self):
+        from decoytell.engine import verify
+        from decoytell.generator import Observation, generate_history
+
+        decoy = {
+            "service_banner": "Apache/2.4.54 (Debian)",
+            "patch_cadence_days": 12,
+            "timing_band": "fast",
+            "account_age_days": 810,
+            "monitoring_behavior": "immediate",
+        }
+        fresh = generate_history(1001)
+        verdict, _, _ = verify(fresh, decoy)
+        self.assertEqual(verdict, "PASS")
+        stale = [
+            Observation(
+                days_ago=o.days_ago + 2.0,
+                service_banner=o.service_banner,
+                patch_cadence_days=o.patch_cadence_days,
+                timing_band=o.timing_band,
+                account_age_days=o.account_age_days,
+                monitoring_behavior=o.monitoring_behavior,
+            )
+            for o in fresh
+        ]
+        verdict, _, _ = verify(stale, decoy)
+        self.assertEqual(verdict, "STALE_DATA")
+
     def test_insufficient_history_refuses_to_certify(self):
         report = run_scenario(_config(observations=50))
         self.assertEqual(report["verdict"], "INSUFFICIENT_DATA")

@@ -7,6 +7,7 @@ identity through the control plane, re-probe and re-verify, and log the
 cycle. Engine verdicts and semantics are untouched.
 """
 
+import random
 import time
 from collections import Counter
 from datetime import datetime, timezone
@@ -42,6 +43,16 @@ def _unreachable(observation):
     return observation.get("service_banner") is None
 
 
+def _inter_cycle_sleep(interval):
+    """Pause between cycles with jitter so the probe cadence is not perfectly
+    predictable to an external observer (I1); a drifted decoy stays exposed
+    for at most ~1.5x the nominal interval instead of an exact, timed gap.
+    interval <= 0 (tests, one-shot verify) returns immediately."""
+    if interval <= 0:
+        return
+    time.sleep(interval * random.uniform(0.5, 1.5))
+
+
 def run_loop(probe, store, control, real, decoy, interval=2.0, cycles=None,
              window_days=90, log=print, should_stop=None):
     """Run the scheduled verification loop.
@@ -65,12 +76,16 @@ def run_loop(probe, store, control, real, decoy, interval=2.0, cycles=None,
 
         real_obs = probe(*real)
         if _unreachable(real_obs):
-            event = {"cycle": cycle, "timestamp": timestamp, "verdict": "UNREACHABLE",
-                     "recheck": "UNREACHABLE", "fixes": []}
+            # The real asset is dark while the decoy keeps answering:
+            # differential availability is itself an attacker-visible
+            # fingerprint. We do not mirror the outage here (out of scope);
+            # we surface it loudly so it can never read as a clean pass.
+            event = {"cycle": cycle, "timestamp": timestamp, "verdict": "MIRRORING_REQUIRED",
+                     "recheck": "MIRRORING_REQUIRED", "fixes": [], "analysis": None}
             events.append(event)
             log(event)
             if cycles is None or cycle < cycles:
-                time.sleep(interval)
+                _inter_cycle_sleep(interval)
             continue
 
         store.append(real_obs, target="real-asset")
@@ -78,11 +93,11 @@ def run_loop(probe, store, control, real, decoy, interval=2.0, cycles=None,
 
         if _unreachable(decoy_obs):
             event = {"cycle": cycle, "timestamp": timestamp, "verdict": "UNREACHABLE",
-                     "recheck": "UNREACHABLE", "fixes": []}
+                     "recheck": "UNREACHABLE", "fixes": [], "analysis": None}
             events.append(event)
             log(event)
             if cycles is None or cycle < cycles:
-                time.sleep(interval)
+                _inter_cycle_sleep(interval)
             continue
 
         # Persist the decoy observation too, so the store documents both
@@ -114,8 +129,15 @@ def run_loop(probe, store, control, real, decoy, interval=2.0, cycles=None,
         else:
             recheck = verdict
 
+        # A "CORRECTED" verdict is only trustworthy when every fix actually
+        # landed on the live decoy. Un-applicable fixes (cert-baked account
+        # age, host-level monitoring) leave the decoy drifted: escalate to
+        # CORRECTED_PARTIAL so the state is never mistaken for a clean pass.
+        if verdict == "CORRECTED" and any(not f.get("applied") for f in applied):
+            verdict = "CORRECTED_PARTIAL"
+
         event = {"cycle": cycle, "timestamp": timestamp, "verdict": verdict,
-                 "recheck": recheck, "fixes": applied}
+                 "recheck": recheck, "fixes": applied, "analysis": _analysis}
         events.append(event)
         log(event)
 
@@ -127,5 +149,5 @@ def run_loop(probe, store, control, real, decoy, interval=2.0, cycles=None,
             )
 
         if cycles is None or cycle < cycles:
-            time.sleep(interval)
+            _inter_cycle_sleep(interval)
     return events

@@ -143,10 +143,11 @@ class LoopTests(unittest.TestCase):
         self.assertEqual(targets.count("real-asset"), 3)
         self.assertEqual(targets.count("decoy"), 3)
 
-    def test_unapplicable_fix_never_reaches_the_control_plane(self):
+    def test_unapplicable_fix_escalates_instead_of_passing(self):
         # account_age drift is fixable by the engine (correctable) but not
-        # applicable on a live container (cert is baked): the loop must mark
-        # it "cannot apply" and make no identity change.
+        # applicable on a live container (cert is baked): the loop must NOT
+        # claim CORRECTED. The verdict escalates to CORRECTED_PARTIAL, no
+        # identity change is made, and the fix is marked "cannot apply".
         age_drift_probe = FakeProbe(
             REAL_OBS,
             [{"service_banner": "Apache/2.4.54 (Debian)", "patch_cadence_days": 12.0,
@@ -157,10 +158,27 @@ class LoopTests(unittest.TestCase):
             age_drift_probe, self.store, self.control, REAL, DECOY,
             interval=0.0, cycles=1, log=lambda e: None,
         )
-        self.assertEqual(events[0]["verdict"], "CORRECTED")
+        self.assertEqual(events[0]["verdict"], "CORRECTED_PARTIAL")
+        self.assertNotEqual(events[0]["recheck"], "PASS")
         self.assertEqual(self.control.applied, [])
         self.assertEqual(events[0]["fixes"][0]["applied"], False)
         self.assertIn("not applicable", events[0]["fixes"][0]["reason"])
+
+    def test_unreachable_real_escalates_to_mirroring_required(self):
+        outage_probe = FakeProbe(
+            {"service_banner": None, "patch_cadence_days": None,
+             "timing_band": None, "account_age_days": None,
+             "monitoring_behavior": "silent"},
+            [REAL_OBS] * 5,
+        )
+        events = run_loop(
+            outage_probe, self.store, self.control, REAL, DECOY,
+            interval=0.0, cycles=2, log=lambda e: None,
+        )
+        self.assertEqual(events[0]["verdict"], "MIRRORING_REQUIRED")
+        self.assertEqual(events[0]["recheck"], "MIRRORING_REQUIRED")
+        self.assertEqual(events[0]["fixes"], [])
+        self.assertEqual(len(events), 2)
 
     def test_events_carry_timestamp_and_cycle(self):
         events = run_loop(
